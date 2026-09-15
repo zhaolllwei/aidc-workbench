@@ -194,7 +194,7 @@ table.lib .pcore{color:var(--green)}
 .filter-sep{width:1px;height:22px;background:var(--border)}
 
 
-/* Gitee 同步 */
+/* 同步状态 */
 .sync-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--text3);margin:0 6px 0 2px;vertical-align:middle}
 .sync-dot.on{background:var(--green)}
 .sync-dot.wait{background:var(--yellow)}
@@ -634,57 +634,38 @@ function genNotes(){
     r.note = cur.slice(0,50);
   });
 }
-/* ---------- Gitee 同步（同事可编辑客户状态，与机器人市场共用 Whatdreams/robotdir-sync 仓库） ---------- */
-const SYNC_BASE='https://gitee.com/api/v5/repos/Whatdreams/robotdir-sync/contents/sync.json';
-const SYNC_TOKEN='357303691eb215c3768c516b81f378c6';
-let SYNC_TIMER=null, SYNC_SHA=null, SYNC_BUSY=false;
-function b64enc(s){return btoa(unescape(encodeURIComponent(s)));}
-function b64dec(b){try{return decodeURIComponent(escape(atob(String(b).replace(/\s/g,''))));}catch(e){return null;}}
+/* ---------- GitHub 后端同步（多人实时协作，走腾讯云函数 SCF 写仓库） ---------- */
+const SYNC_API='https://1409009059-7azghz30er.ap-guangzhou.tencentscf.com/'; // 腾讯云 SCF 函数 URL（实时同步后端：任何人保存→写回 GitHub 仓库 aidc_overrides.json）
+const SYNC_KEY='aidc-shared-2026'; // 弱鉴权（挡君子，非强安全）；须与 scf/index.js 环境变量 SYNC_KEY 一致
+let SYNC_TIMER=null, SYNC_BUSY=false;
 function setSyncChip(txt,cls){const el=document.getElementById('syncChip');if(el){el.textContent=txt;el.className='syncchip '+(cls||'off');}}
-function loadLocalOv(){try{return JSON.parse(localStorage.getItem('aidc_overrides_v1')||'{}');}catch(e){return {};}}
-function mergeOv(remote,local){const m={};const keys=new Set([...Object.keys(remote),...Object.keys(local)]);keys.forEach(k=>{m[k]=Object.assign({},remote[k]||{},local[k]||{});});return m;}
-async function giteeGet(){
+function mergeOv(remote,local){const m={};const keys=new Set([...Object.keys(remote||{}),...Object.keys(local||{})]);keys.forEach(k=>{m[k]=Object.assign({},remote[k]||{},local[k]||{});});return m;}
+async function loadRemoteOv(){
+  if(!SYNC_API){ // 后端未配置：拉同域静态兜底，否则仅本机
+    try{const r2=await fetch('aidc_overrides.json?'+Date.now());if(r2.ok){const ov=await r2.json();setSyncChip('☁ 已同步(静态)','ok');return ov;}}catch(e){}
+    setSyncChip('☁ 仅本机','off');return {};
+  }
   setSyncChip('☁ 同步中…','busy');
   try{
-    const r=await fetch(SYNC_BASE,{headers:{'Authorization':'token '+SYNC_TOKEN}});
-    if(!r.ok){await r.text();setSyncChip('☁ 同步失败','off');return null;}
-    const j=await r.json();
-    SYNC_SHA=j.sha||null;
-    const txt=b64dec(j.content||'');
-    let full={};try{full=txt?JSON.parse(txt):{};}catch(e){full={};}
-    setSyncChip('☁ 已同步 '+new Date().toLocaleTimeString(),'ok');
-    return full.aidc_overrides||{};
-  }catch(e){setSyncChip('☁ 仅本机','off');return null;}
-}
-async function giteePut(ov){
-  setSyncChip('☁ 同步中…','busy');
-  let full={};
-  try{
-    const rg=await fetch(SYNC_BASE,{headers:{'Authorization':'token '+SYNC_TOKEN}});
-    if(rg.ok){
-      const j=await rg.json();
-      SYNC_SHA=j.sha||SYNC_SHA;
-      const txt=b64dec(j.content||'');
-      try{full=txt?JSON.parse(txt):{};}catch(e){full={};}
-    }
+    const r=await fetch(SYNC_API,{headers:{'X-Sync-Key':SYNC_KEY}});
+    if(r.ok){const j=await r.json();const ov=(j&&j.overrides)?j.overrides:{};setSyncChip('☁ 已同步 '+new Date().toLocaleTimeString(),'ok');return ov;}
   }catch(e){}
-  full.aidc_overrides=ov;
-  full.aidc_savedAt=Date.now();
-  const body={content:b64enc(JSON.stringify(full,null,2)),message:'AIDC看板同步 · '+new Date().toISOString()};
-  if(SYNC_SHA)body.sha=SYNC_SHA;
+  try{const r2=await fetch('aidc_overrides.json?'+Date.now());if(r2.ok){const ov=await r2.json();setSyncChip('☁ 已同步(静态)','ok');return ov;}}catch(e){}
+  setSyncChip('☁ 仅本机','off');return {};
+}
+async function pushRemoteOv(ov){
+  if(!SYNC_API){setSyncChip('☁ 未配置后端','off');return false;}
+  setSyncChip('☁ 同步中…','busy');
   try{
-    const r=await fetch(SYNC_BASE,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'token '+SYNC_TOKEN},body:JSON.stringify(body)});
-    if(r.status===409){setSyncChip('☁ 合并重试…','busy');const fresh=await giteeGet();if(fresh!==null){const merged=mergeOv(fresh,loadLocalOv());return await giteePut(merged);}return false;}
-    if(!r.ok){await r.text();setSyncChip('☁ 同步失败','off');return false;}
-    const j=await r.json();if(j&&j.content&&j.content.sha)SYNC_SHA=j.content.sha;
-    setSyncChip('☁ 已同步 '+new Date().toLocaleTimeString(),'ok');
-    return true;
-  }catch(e){setSyncChip('☁ 仅本机','off');return false;}
+    const r=await fetch(SYNC_API,{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Key':SYNC_KEY},body:JSON.stringify({overrides:ov})});
+    if(r.ok){setSyncChip('☁ 已同步 '+new Date().toLocaleTimeString(),'ok');return true;}
+  }catch(e){}
+  setSyncChip('☁ 同步失败','off');return false;
 }
 async function syncLoad(){
-  const ov=await giteeGet();
-  if(ov===null)return;
-  const merged=mergeOv(ov,loadLocalOv());
+  const remote=await loadRemoteOv();
+  if(!remote)return;
+  const merged=mergeOv(loadOverrides(),remote); // remote 优先：启动即看他人最新
   localStorage.setItem('aidc_overrides_v1',JSON.stringify(merged));
   applyOverrides();genNotes();renderAll();
 }
@@ -695,10 +676,13 @@ function scheduleSyncSave(){
 async function doSyncSave(){
   if(SYNC_BUSY)return;SYNC_BUSY=true;
   try{
-    const remote=await giteeGet();
-    const ov=(remote===null)?loadLocalOv():mergeOv(remote,loadLocalOv());
-    await giteePut(ov);
-  }finally{SYNC_BUSY=false;}
+    const remote=await loadRemoteOv();
+    const ov=mergeOv(remote,loadOverrides()); // local 优先：保存本机修改
+    localStorage.setItem('aidc_overrides_v1',JSON.stringify(ov));
+    applyOverrides();
+    await pushRemoteOv(ov);
+  }catch(e){setSyncChip('☁ 同步异常','off');}
+  finally{SYNC_BUSY=false;}
 }
 function syncNow(){if(SYNC_BUSY)return;setSyncChip('☁ 同步中…','busy');doSyncSave();}
 
