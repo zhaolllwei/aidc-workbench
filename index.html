@@ -639,6 +639,8 @@ const SYNC_API='https://1409009059-7azghz30er.ap-guangzhou.tencentscf.com/'; // 
 const SYNC_KEY='aidc-shared-2026'; // 弱鉴权（挡君子，非强安全）；须与 scf/index.js 环境变量 SYNC_KEY 一致
 let SYNC_TIMER=null, SYNC_BUSY=false;
 function setSyncChip(txt,cls){const el=document.getElementById('syncChip');if(el){el.textContent=txt;el.className='syncchip '+(cls||'off');}}
+const AUTH_MODE=(typeof SYNC_KEY==='string'&&SYNC_KEY.length>0); // 前端是否配置弱鉴权 key（后端 SYNC_KEY 一致即鉴权模式）
+function lockTag(){return AUTH_MODE?'🔒':'☁';}
 function mergeOv(remote,local){const m={};const keys=new Set([...Object.keys(remote||{}),...Object.keys(local||{})]);keys.forEach(k=>{m[k]=Object.assign({},remote[k]||{},local[k]||{});});return m;}
 async function loadRemoteOv(){
   if(!SYNC_API){ // 后端未配置：拉同域静态兜底，否则仅本机
@@ -648,7 +650,8 @@ async function loadRemoteOv(){
   setSyncChip('☁ 同步中…','busy');
   try{
     const r=await fetch(SYNC_API,{headers:{'X-Sync-Key':SYNC_KEY}});
-    if(r.ok){const j=await r.json();const ov=(j&&j.overrides)?j.overrides:{};setSyncChip('☁ 已同步 '+new Date().toLocaleTimeString(),'ok');return ov;}
+    if(r.status===403){setSyncChip('⚠️ 鉴权未通过·检查SYNC_KEY','off');return {};}
+    if(r.ok){const j=await r.json();const ov=(j&&j.overrides)?j.overrides:{};setSyncChip(lockTag()+' 已同步(鉴权) '+new Date().toLocaleTimeString(),'ok');return ov;}
   }catch(e){}
   try{const r2=await fetch('aidc_overrides.json?'+Date.now());if(r2.ok){const ov=await r2.json();setSyncChip('☁ 已同步(静态)','ok');return ov;}}catch(e){}
   setSyncChip('☁ 仅本机','off');return {};
@@ -658,7 +661,8 @@ async function pushRemoteOv(ov){
   setSyncChip('☁ 同步中…','busy');
   try{
     const r=await fetch(SYNC_API,{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Key':SYNC_KEY},body:JSON.stringify({overrides:ov})});
-    if(r.ok){setSyncChip('☁ 已同步 '+new Date().toLocaleTimeString(),'ok');return true;}
+    if(r.status===403){setSyncChip('⚠️ 鉴权未通过·检查SYNC_KEY','off');return false;}
+    if(r.ok){setSyncChip(lockTag()+' 已同步(鉴权) '+new Date().toLocaleTimeString(),'ok');return true;}
   }catch(e){}
   setSyncChip('☁ 同步失败','off');return false;
 }
