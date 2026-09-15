@@ -1,1 +1,7 @@
-{}
+{
+  "__smoke_test__": {
+    "ok": true,
+    "ts": "2026-09-15T10:56:35Z",
+    "by": "WorkBuddy E2E"
+  }
+}
