@@ -322,7 +322,6 @@ table.lib .pcore{color:var(--green)}
             <th>研究评级</th>
             <th onclick="sortLib('sales')">销售负责人 ⇅</th>
             <th onclick="sortLib('cid')">Customer ID ⇅</th>
-            <th onclick="sortLib('sap_name')">SAP官方名 ⇅</th>
             <th onclick="sortLib('dr_lines')">MN DR行 ⇅</th>
             <th onclick="sortLib('pav')">PAV ⇅</th>
             <th onclick="sortLib('pav_win')">Win PAV ⇅</th>
@@ -510,8 +509,8 @@ function renderLib(){
     const [bt,bl]=distTag(r.dist),x=ratingOf(r.name);
     const rate=x?`<span class="badge ${x[0]==='P0'?'b-p0':x[0]==='P1'?'b-p1':'b-p2'}" title="${x[1]||''}">${x[0]}</span>`:'<span class="src">—</span>';
     const core=CORE_SET.has(r.product);
-    return `<tr onclick="openDetail(${r._i})"><td class="cname">${r.name}</td><td class="${core?'pcore':''}">${DATA.prod_label[r.product]||r.product}</td><td>${r.city||'—'}</td><td>${provOf(r.city)||'—'}</td><td><span class="badge ${bt}">${bl}</span></td><td>${rate}</td><td style="color:var(--text2)">${esc(r.sales)||'—'}</td><td style="color:var(--text2);font-family:Consolas,monospace">${esc(r.cid)||'—'}</td><td style="color:var(--text2)">${esc(r.sap_name)||'—'}</td><td style="text-align:right;font-family:Consolas,monospace">${r.dr_lines?r.dr_lines:'—'}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.pav)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.pav_win)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--yellow)">${fmtM(r.pav_open)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.pos26)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.ecbl27)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--accent2)">${fmtM(r.stock)}</td><td style="color:var(--text2);max-width:220px">${esc(r.note)||'—'}</td></tr>`;
-  }).join('')||'<tr><td colspan="17" style="text-align:center;color:var(--text2);padding:24px">无匹配客户</td></tr>';
+    return `<tr onclick="openDetail(${r._i})"><td class="cname">${r.name}</td><td class="${core?'pcore':''}">${DATA.prod_label[r.product]||r.product}</td><td>${r.city||'—'}</td><td>${provOf(r.city)||'—'}</td><td><span class="badge ${bt}">${bl}</span></td><td>${rate}</td><td style="color:var(--text2)">${esc(r.sales)||'—'}</td><td style="color:var(--text2);font-family:Consolas,monospace">${esc(r.cid)||'—'}</td><td style="text-align:right;font-family:Consolas,monospace">${r.dr_lines?r.dr_lines:'—'}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.pav)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.pav_win)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--yellow)">${fmtM(r.pav_open)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.pos26)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--green)">${fmtM(r.ecbl27)}</td><td style="text-align:right;font-family:Consolas,monospace;color:var(--accent2)">${fmtM(r.stock)}</td><td style="color:var(--text2);max-width:220px">${esc(r.note)||'—'}</td></tr>`;
+  }).join('')||'<tr><td colspan="16" style="text-align:center;color:var(--text2);padding:24px">无匹配客户</td></tr>';
   document.getElementById('libStat').textContent='共 '+total+' 家';
   let pg='<span class="page-info">第 '+libCur+' / '+pages+' 页 · 每页 '+libSize+' 条</span>';
   pg+='<button class="page-btn" '+(libCur<=1?'disabled':'')+' onclick="libPage('+(libCur-1)+')">上一页</button>';
