@@ -321,7 +321,7 @@ table.lib .pcore{color:var(--green)}
             <th onclick="sortLib('city')">城市 ⇅</th>
             <th onclick="sortLib('prov')">省份 ⇅</th>
             <th>渠道</th>
-            <th>研究评级</th>
+            <th onclick="sortLib('rating')">研究评级 ⇅</th>
             <th onclick="sortLib('sales')">销售负责人 ⇅</th>
             <th onclick="sortLib('cid')">Customer ID ⇅</th>
             <th onclick="sortLib('dr_lines')">MN DR行 ⇅</th>
@@ -378,6 +378,8 @@ function distTag(d){d=(d||'').toLowerCase();
   if(d)return['b-other',d.slice(0,12)];
   return['b-none','未标注'];}
 function ratingOf(name){for(const k in RMAP){if(name.includes(k))return RMAP[k];}return null;}
+const RATE_ORDER={P0:0,P1:1,P2:2,none:3};
+function rateLevel(r){const x=ratingOf(r.name);return x?x[0]:'none';}
 const PROV_MAP={"北京":["北京"],"上海":["上海"],"天津":["天津"],"重庆":["重庆"],"广东":["深圳","广州","东莞","珠海","佛山","惠州","中山","江门","汕头","韶关"],"陕西":["西安","咸阳"],"浙江":["杭州","宁波","温州","嘉兴","台州","湖州","绍兴","衢州","乐清","余姚","慈溪","东阳","桐乡","诸暨","浙江"],"江苏":["南京","苏州","无锡","常州","江阴","张家港","南通","扬州","高邮","启东","常熟","海安","泰州","江苏"],"湖北":["武汉","襄阳"],"福建":["厦门","福州","漳州","龙岩"],"四川":["成都","自贡","雅安","绵阳"],"山东":["济南","烟台","青岛","东营","济宁","淄博","泰安","曲阜","潍坊","胶州","禹城"],"湖南":["长沙","湘潭","株洲"],"河南":["郑州","许昌","平顶山","洛阳","鹤壁","焦作","开封","开封尉氏"],"安徽":["合肥","芜湖","蚌埠"],"江西":["赣州","南昌","新余","上饶"],"辽宁":["大连","锦州"],"河北":["保定","廊坊","三河","唐山","张家口","石家庄"],"山西":["晋中","长治","阳泉"],"海南":["海口","海南"],"台湾":["台北","台湾"],"香港":["香港"],"贵州":["铜仁","贵阳","黔南布依族苗族自治州","贵州"],"青海":["西宁","海西蒙古族藏族自治州"],"甘肃":["兰州"],"新疆":["乌鲁木齐","昌吉","新疆"],"云南":["文山","文山壮族苗族自治州","玉溪"],"吉林":["长春"],"黑龙江":["哈尔滨"],"宁夏":["宁夏"],"海外":["USA","日本","德国","法国","瑞士"]};
 function provOf(city){city=(city||'').trim();for(const p in PROV_MAP){if(PROV_MAP[p].indexOf(city)>=0)return p;}if(!city||city==='未知')return '未知';return '其他';}
 
@@ -482,7 +484,7 @@ function renderCols(){
   const pvEl=document.getElementById('libProv');
   provs.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;pvEl.appendChild(o);});
 })();
-let libCur=1,libSize=60,libSort={k:'',asc:true};
+let libCur=1,libSize=60,libSort={k:'rating',asc:true};
 function libFilter(){
   const q=document.getElementById('libQ').value.trim().toLowerCase();
   const p=document.getElementById('libProd').value,c=document.getElementById('libCity').value,
@@ -507,7 +509,7 @@ function libFilter(){
 function sortLib(k){if(libSort.k===k)libSort.asc=!libSort.asc;else{libSort.k=k;libSort.asc=true;}renderLib();}
 function renderLib(){
   let rows=libFilter();
-  if(libSort.k)rows=rows.slice().sort((a,b)=>{const va=(libSort.k==='prov'?provOf(a.city):(a[libSort.k]||'')),vb=(libSort.k==='prov'?provOf(b.city):(b[libSort.k]||''));return libSort.asc?(va<vb?-1:va>vb?1:0):(va>vb?-1:va<vb?1:0);});
+  if(libSort.k)rows=rows.slice().sort((a,b)=>{if(libSort.k==='rating'){const ra=RATE_ORDER[rateLevel(a)],rb=RATE_ORDER[rateLevel(b)];if(ra!==rb)return libSort.asc?(ra-rb):(rb-ra);return (a.name||'').localeCompare(b.name||'','zh');}const va=(libSort.k==='prov'?provOf(a.city):(a[libSort.k]||'')),vb=(libSort.k==='prov'?provOf(b.city):(b[libSort.k]||''));return libSort.asc?(va<vb?-1:va>vb?1:0):(va>vb?-1:va<vb?1:0);});
   const total=rows.length,pages=Math.max(1,Math.ceil(total/libSize));
   if(libCur>pages)libCur=pages;if(libCur<1)libCur=1;
   const start=(libCur-1)*libSize,pageRows=rows.slice(start,start+libSize);
@@ -530,7 +532,7 @@ function csvCell(v){v=String(v==null?'':v);if(/[",\r\n]/.test(v))v='"'+v.replace
 function fmtM(v){v=+v;if(!v)return '—';if(v>=1e6)return (v/1e6).toFixed(2)+'M';if(v>=1e3)return (v/1e3).toFixed(0)+'K';return ''+v;}
 function exportLib(){
   let rows=libFilter();
-  if(libSort.k)rows=rows.slice().sort((a,b)=>{const va=(libSort.k==='prov'?provOf(a.city):(a[libSort.k]||'')),vb=(libSort.k==='prov'?provOf(b.city):(b[libSort.k]||''));return libSort.asc?(va<vb?-1:va>vb?1:0):(va>vb?-1:va<vb?1:0);});
+  if(libSort.k)rows=rows.slice().sort((a,b)=>{if(libSort.k==='rating'){const ra=RATE_ORDER[rateLevel(a)],rb=RATE_ORDER[rateLevel(b)];if(ra!==rb)return libSort.asc?(ra-rb):(rb-ra);return (a.name||'').localeCompare(b.name||'','zh');}const va=(libSort.k==='prov'?provOf(a.city):(a[libSort.k]||'')),vb=(libSort.k==='prov'?provOf(b.city):(b[libSort.k]||''));return libSort.asc?(va<vb?-1:va>vb?1:0):(va>vb?-1:va<vb?1:0);});
   if(!rows.length){alert('当前筛选条件下没有可导出的客户');return;}
   const head=['公司名称','产品线','所在地','省份','ADI代理渠道','研究评级','评级说明','销售负责人','Customer ID','SAP官方名','MN DR行','PAV','Win PAV','Open PAV','FY26 MNPAV','DINPAV','FY26 POS+','ECBL FY27 CRD','Stock$','Group','End Sales','备注'];
   const out=[head.map(csvCell).join(',')];
