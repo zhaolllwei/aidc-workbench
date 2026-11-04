@@ -457,6 +457,7 @@ function renderCols(){
     if(q) recs=recs.filter(r=>(r.name+r.city).toLowerCase().includes(q));
     if(G_RATE!=='all') recs=recs.filter(r=>{const x=ratingOf(r.name);return (x?x[0]:'none')===G_RATE;});
     total+=recs.length;
+    recs=recs.sort((a,b)=>{const ra=RATE_ORDER[rateLevel(a)],rb=RATE_ORDER[rateLevel(b)];if(ra!==rb)return ra-rb;return (a.name||'').localeCompare(b.name||'','zh');});
     const chips=recs.map(r=>{
       const [bt,bl]=distTag(r.dist);const rt=ratingOf(r.name);
       const star=rt?`<span class="badge ${rt[0]==='P0'?'b-p0':rt[0]==='P1'?'b-p1':'b-p2'}" title="${rt[1]||''}">${rt[0]}</span>`:'';
