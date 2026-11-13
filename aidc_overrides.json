@@ -76,5 +76,11 @@
     "sales": "(NJ) Calvin Wang",
     "cid": "221120",
     "note": "布线+模块化数据中心+PDU,数据中心基础设施"
+  },
+  "南京能利芯科技有限公司": {
+    "dist": "Macnica",
+    "sales": "(NJ) Samuel Liu",
+    "cid": "152523",
+    "note": "专注于高性能电源模块的研发，核心产品包括DC-DC高功率密度模块和VR电源解决方案，可广泛应用于AI"
   }
 }
